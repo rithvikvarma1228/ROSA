@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KneeAI — Orthopedic Imaging Intelligence</title>
+  <meta name="description" content="KneeAI is a premium AI-powered knee MRI analysis platform for radiologists and orthopedic surgeons." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dicom-parser@1.8.21/dist/dicomParser.min.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     LOADING SCREEN
+════════════════════════════════════════════ -->
+<div id="loading-screen">
+  <div class="loading-content">
+    <div class="loading-logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M24 4C13 4 4 13 4 24s9 20 20 20 20-9 20-20S35 4 24 4z" fill="url(#lg1)" opacity="0.15"/>
+          <path d="M18 8c0 0 2 8-2 12s-8 6-8 6 6 2 10 8 2 12 2 12 2-8 6-12 10-6 10-6-8-2-10-8-8-12-8-12z" fill="url(#lg2)"/>
+          <defs>
+            <linearGradient id="lg1" x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#0EA5A4"/>
+              <stop offset="1" stop-color="#3B82F6"/>
+            </linearGradient>
+            <linearGradient id="lg2" x1="10" y1="8" x2="38" y2="40" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#0EA5A4"/>
+              <stop offset="1" stop-color="#6366F1"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <span class="logo-text">KneeAI</span>
+    </div>
+
+    <div class="loading-stages">
+      <div class="loading-stage active" id="stage-1">
+        <div class="stage-icon">🧠</div>
+        <div class="stage-info">
+          <span class="stage-label">AI Processing Scan</span>
+          <div class="stage-bar"><div class="stage-fill" style="--d:0.0s"></div></div>
+        </div>
+      </div>
+      <div class="loading-stage" id="stage-2">
+        <div class="stage-icon">🔬</div>
+        <div class="stage-info">
+          <span class="stage-label">Segmentation</span>
+          <div class="stage-bar"><div class="stage-fill" style="--d:0.6s"></div></div>
+        </div>
+      </div>
+      <div class="loading-stage" id="stage-3">
+        <div class="stage-icon">🌐</div>
+        <div class="stage-info">
+          <span class="stage-label">3D Reconstruction</span>
+          <div class="stage-bar"><div class="stage-fill" style="--d:1.2s"></div></div>
+        </div>
+      </div>
+      <div class="loading-stage" id="stage-4">
+        <div class="stage-icon">⚡</div>
+        <div class="stage-info">
+          <span class="stage-label">Generating Mesh</span>
+          <div class="stage-bar"><div class="stage-fill" style="--d:1.8s"></div></div>
+        </div>
+      </div>
+      <div class="loading-stage" id="stage-5">
+        <div class="stage-icon">✨</div>
+        <div class="stage-info">
+          <span class="stage-label">Loading Viewer</span>
+          <div class="stage-bar"><div class="stage-fill" style="--d:2.4s"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="loading-spinner">
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring ring-2"></div>
+      <div class="spinner-ring ring-3"></div>
+    </div>
+    <p class="loading-tagline">Powered by Deep Learning · Built for Surgeons</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MAIN APPLICATION
+════════════════════════════════════════════ -->
+<div id="app" class="app hidden">
+
+  <!-- ── SIDEBAR ── -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-icon-sm">
+          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 4c0 0 2 6-1 9S4 17 4 17s4 1 7 5 1 9 1 9 1-6 4-9 8-4 8-4-6-2-7-6S12 4 12 4z" fill="url(#slg)"/>
+            <defs><linearGradient id="slg" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse"><stop stop-color="#0EA5A4"/><stop offset="1" stop-color="#6366F1"/></linearGradient></defs>
+          </svg>
+        </div>
+        <span class="sidebar-logo-text">KneeAI</span>
+      </div>
+      <button id="sidebar-collapse" class="sidebar-collapse-btn" title="Collapse sidebar">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5h14a1 1 0 000-2H3a1 1 0 000 2zm0 6h14a1 1 0 000-2H3a1 1 0 000 2zm0 6h14a1 1 0 000-2H3a1 1 0 000 2z" clip-rule="evenodd"/></svg>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">WORKSPACE</div>
+      <a href="#" class="nav-item active" data-section="dashboard">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+        <span class="nav-label">Dashboard</span>
+        <span class="nav-badge">3</span>
+      </a>
+      <a href="#" class="nav-item" data-section="upload">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>
+        <span class="nav-label">Upload Scan</span>
+      </a>
+      <a href="#" class="nav-item" data-section="patients">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>
+        <span class="nav-label">Patients</span>
+        <span class="nav-badge">128</span>
+      </a>
+
+      <div class="nav-section-label" style="margin-top:16px">ANALYSIS</div>
+      <a href="#" class="nav-item" data-section="segmentation">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/><path d="M2 12h20"/></svg></span>
+        <span class="nav-label">Segmentation</span>
+      </a>
+      <a href="#" class="nav-item" data-section="reconstruction">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></span>
+        <span class="nav-label">3D Reconstruction</span>
+        <span class="nav-tag">LIVE</span>
+      </a>
+      <a href="#" class="nav-item" data-section="detection">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+        <span class="nav-label">Disease Detection</span>
+      </a>
+      <a href="#" class="nav-item" data-section="reports">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+        <span class="nav-label">Reports</span>
+      </a>
+
+      <div class="nav-section-label" style="margin-top:16px">SYSTEM</div>
+      <a href="#" class="nav-item" data-section="history">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 106 5.3L3 8"/><line x1="12" y1="7" x2="12" y2="12"/><line x1="12" y1="12" x2="15" y2="15"/></svg></span>
+        <span class="nav-label">History</span>
+      </a>
+      <a href="#" class="nav-item" data-section="settings">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>
+        <span class="nav-label">Settings</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="ai-status">
+        <div class="ai-pulse"></div>
+        <span>AI Engine Active</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── MAIN AREA ── -->
+  <div class="main-wrapper">
+
+    <!-- TOP NAV -->
+    <header class="topnav">
+      <div class="topnav-left">
+        <div class="search-bar">
+          <svg class="search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M15 15l-3-3"/></svg>
+          <input id="patient-search" type="text" placeholder="Search patients, scans, reports…" />
+          <span class="search-shortcut">⌘K</span>
+        </div>
+      </div>
+      <div class="topnav-right">
+        <button id="btn-upload" class="btn btn-ghost">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 13v4a1 1 0 01-1 1H4a1 1 0 01-1-1v-4"/><polyline points="14 7 10 3 6 7"/><line x1="10" y1="3" x2="10" y2="13"/></svg>
+          Upload Scan
+        </button>
+        <button id="btn-report" class="btn btn-primary">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a1 1 0 00-1 1v14a1 1 0 001 1h8a1 1 0 001-1V3a1 1 0 00-1-1z"/><line x1="10" y1="7" x2="14" y2="7"/><line x1="6" y1="11" x2="14" y2="11"/><line x1="6" y1="15" x2="11" y2="15"/></svg>
+          Generate Report
+        </button>
+        <button class="notif-btn" id="notif-btn">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2a6 6 0 016 6v3l1.5 2.5H2.5L4 11V8a6 6 0 016-6z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="notif-dot"></span>
+        </button>
+
+        <!-- ── THEME TOGGLE ── -->
+        <button id="theme-toggle" class="theme-toggle-btn" title="Toggle Light / Dark mode">
+          <div class="theme-toggle-track">
+            <span class="theme-icon-sun">☀️</span>
+            <span class="theme-icon-moon">🌙</span>
+            <div class="theme-toggle-thumb"></div>
+          </div>
+        </button>
+
+        <div class="user-avatar" id="user-avatar">
+          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Dr.Chen" alt="Dr. Chen Wei" onerror="this.style.display='none'"/>
+          <div class="avatar-fallback">CW</div>
+          <div class="user-tooltip">
+            <strong>Dr. Chen Wei</strong>
+            <span>Radiologist · General Hospital</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- CONTENT AREA -->
+    <div class="content-area">
+
+      <!-- CENTER: 3D VIEWER -->
+      <div class="viewer-panel">
+        <!-- Patient info strip -->
+        <div class="viewer-patient-strip">
+          <div class="vps-item"><span class="vps-label">Patient</span><span class="vps-val">KN-2024-0847</span></div>
+          <span class="vps-sep">|</span>
+          <div class="vps-item"><span class="vps-label">Name</span><span class="vps-val">James R. Mitchell</span></div>
+          <span class="vps-sep">|</span>
+          <div class="vps-item"><span class="vps-label">Scan</span><span class="vps-val">MRI · Left Knee</span></div>
+          <span class="vps-sep">|</span>
+          <div class="vps-item"><span class="vps-label">Date</span><span class="vps-val">2024-08-14</span></div>
+          <span class="vps-sep">|</span>
+          <div class="vps-item"><span class="vps-label">Slices</span><span class="vps-val">48 × 1.5mm</span></div>
+          <span class="vps-sep">|</span>
+          <div class="vps-item"><span class="vps-label">AI Score</span><span class="vps-val" style="color:#EF4444">⚠ 87.3%</span></div>
+        </div>
+
+        <div class="viewer-toolbar">
+          <div class="viewer-title-group">
+            <span class="viewer-label">3D Knee Viewer</span>
+            <span class="viewer-badge">LIVE</span>
+          </div>
+          <div class="toolbar-actions">
+            <button class="tool-btn active" id="tb-rotate" title="Rotate">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12a8 8 0 018-8M4 12l-3-3m3 3l3-3"/></svg>
+            </button>
+            <button class="tool-btn" id="tb-wireframe" title="Toggle Wireframe">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><polygon points="10 2 18 18 2 18"/></svg>
+            </button>
+            <button class="tool-btn" id="tb-xray" title="X-Ray Mode">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="14" height="14" rx="2"/><line x1="7" y1="7" x2="13" y2="13"/><line x1="13" y1="7" x2="7" y2="13"/></svg>
+            </button>
+            <button class="tool-btn" id="tb-explode" title="Exploded View">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="2"/><line x1="10" y1="4" x2="10" y2="2"/><line x1="10" y1="18" x2="10" y2="16"/><line x1="4" y1="10" x2="2" y2="10"/><line x1="18" y1="10" x2="16" y2="10"/><line x1="5.7" y1="5.7" x2="4.3" y2="4.3"/><line x1="15.7" y1="14.3" x2="14.3" y2="15.7"/><line x1="14.3" y1="4.3" x2="15.7" y2="5.7"/><line x1="4.3" y1="15.7" x2="5.7" y2="14.3"/></svg>
+            </button>
+            <button class="tool-btn" id="tb-section" title="Cross Section">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="10" x2="18" y2="10"/><rect x="5" y="4" width="10" height="12" rx="1"/></svg>
+            </button>
+            <button class="tool-btn active" id="tb-annotations" title="Toggle Annotations (1, 2, 3, 4...)">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="7"/><text x="10" y="14" font-size="10" font-weight="bold" fill="currentColor" stroke="none" text-anchor="middle">i</text></svg>
+            </button>
+            <div class="tool-divider"></div>
+            <button class="tool-btn" id="tb-autorotate" title="Auto Rotate">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 10a8 8 0 1016 0"/><polyline points="16 2 16 10 8 10"/></svg>
+            </button>
+            <button class="tool-btn" id="tb-reset" title="Reset Camera">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 109-9"/><polyline points="3 3 3 12 12 12"/></svg>
+            </button>
+            <button class="tool-btn" id="tb-fullscreen" title="Fullscreen">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8V3h5M17 8V3h-5M3 12v5h5M17 12v5h-5"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div id="viewer-canvas-wrap">
+          <canvas id="knee-canvas"></canvas>
+
+          <!-- 3D Projected Interactive Annotation Pins -->
+          <div id="annotation-pins-container" class="annotation-pins-container"></div>
+
+          <!-- Sketchfab-style Bottom Annotation Bar -->
+          <div id="annotation-bar" class="annotation-bar">
+            <button class="anno-nav-btn" id="anno-prev" title="Previous annotation">❮</button>
+            <div class="anno-display" id="anno-display">
+              <span class="anno-badge-icon" id="anno-badge-icon">🏷️</span>
+              <span class="anno-title-text" id="anno-title-text">Select an annotation</span>
+            </div>
+            <button class="anno-nav-btn" id="anno-next" title="Next annotation">❯</button>
+          </div>
+
+          <!-- Transparency slider overlay -->
+          <div class="viewer-overlay-controls">
+            <div class="overlay-control-group">
+              <label>Transparency</label>
+              <input type="range" id="transparency-slider" min="0" max="100" value="0" class="range-slider" />
+            </div>
+          </div>
+
+          <!-- Measurement & crosshair tools -->
+          <div class="viewer-overlay-badges">
+            <div class="overlay-badge"><span class="dot teal"></span> Femur</div>
+            <div class="overlay-badge"><span class="dot blue"></span> Tibia</div>
+            <div class="overlay-badge"><span class="dot purple"></span> Fibula</div>
+            <div class="overlay-badge"><span class="dot amber"></span> Patella</div>
+            <div class="overlay-badge"><span class="dot tendon"></span> Tendons</div>
+            <div class="overlay-badge dot-red"><span class="dot red"></span> Abnormality</div>
+          </div>
+
+          <!-- Click hint -->
+          <div class="viewer-hint" id="viewer-hint">Click any bone or numbered pin to inspect · Drag &amp; drop .glb</div>
+        </div>
+
+        <!-- ── BEFORE/AFTER COMPARISON BAR ── -->
+        <div class="comparison-bar">
+          <span class="cmp-label">Comparison:</span>
+          <button class="cmp-btn active" id="cmp-current">Current Scan</button>
+          <button class="cmp-btn" id="cmp-pre">Pre-Surgery</button>
+          <button class="cmp-btn" id="cmp-healthy">Healthy Reference</button>
+          <div class="cmp-spacer"></div>
+          <button class="cmp-btn" id="cmp-measure">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8h12M8 2v12"/></svg>
+            Measure
+          </button>
+        </div>
+      </div>
+
+      <!-- RIGHT PANEL -->
+      <aside class="right-panel">
+        <!-- Patient Card -->
+        <div class="panel-card patient-card">
+          <div class="card-header">
+            <span class="card-title">Patient</span>
+            <span class="status-badge status-active">Active Case</span>
+          </div>
+          <div class="patient-avatar-row">
+            <div class="patient-avatar-wrap">
+              <div class="patient-avatar">MK</div>
+              <div class="patient-avatar-ring"></div>
+            </div>
+            <div class="patient-meta">
+              <div class="patient-name">Margaret K.</div>
+              <div class="patient-sub">ID #KN-2024-0847</div>
+            </div>
+          </div>
+          <div class="patient-details-grid">
+            <div class="detail-item"><span class="detail-label">Age</span><span class="detail-val">58 yrs</span></div>
+            <div class="detail-item"><span class="detail-label">Gender</span><span class="detail-val">Female</span></div>
+            <div class="detail-item"><span class="detail-label">Scan Date</span><span class="detail-val">Jul 20, 2026</span></div>
+            <div class="detail-item"><span class="detail-label">Hospital</span><span class="detail-val">Metro Med</span></div>
+            <div class="detail-item"><span class="detail-label">Scan Type</span><span class="detail-val">MRI 3T</span></div>
+            <div class="detail-item"><span class="detail-label">Physician</span><span class="detail-val">Dr. Chen</span></div>
+          </div>
+        </div>
+
+        <!-- Segmentation Metrics -->
+        <div class="panel-card">
+          <div class="card-header">
+            <span class="card-title">Segmentation Results</span>
+            <button class="card-action-btn">Details</button>
+          </div>
+          <div class="metrics-row">
+            <div class="metric-circle" data-pct="93.7" data-color="#0EA5A4">
+              <svg class="circle-svg" viewBox="0 0 80 80">
+                <circle class="circle-bg" cx="40" cy="40" r="32"/>
+                <circle class="circle-fill" cx="40" cy="40" r="32" style="stroke:#0EA5A4"/>
+              </svg>
+              <div class="circle-label">
+                <span class="circle-val">93.7</span>
+                <span class="circle-unit">Dice</span>
+              </div>
+            </div>
+            <div class="metric-circle" data-pct="88.4" data-color="#3B82F6">
+              <svg class="circle-svg" viewBox="0 0 80 80">
+                <circle class="circle-bg" cx="40" cy="40" r="32"/>
+                <circle class="circle-fill" cx="40" cy="40" r="32" style="stroke:#3B82F6"/>
+              </svg>
+              <div class="circle-label">
+                <span class="circle-val">88.4</span>
+                <span class="circle-unit">IoU</span>
+              </div>
+            </div>
+            <div class="metric-circle" data-pct="96.1" data-color="#10B981">
+              <svg class="circle-svg" viewBox="0 0 80 80">
+                <circle class="circle-bg" cx="40" cy="40" r="32"/>
+                <circle class="circle-fill" cx="40" cy="40" r="32" style="stroke:#10B981"/>
+              </svg>
+              <div class="circle-label">
+                <span class="circle-val">96.1</span>
+                <span class="circle-unit">Acc</span>
+              </div>
+            </div>
+          </div>
+          <div class="metrics-row metrics-row-2">
+            <div class="metric-bar-item">
+              <div class="mb-header"><span>Precision</span><span class="mb-val">91.2%</span></div>
+              <div class="mb-track"><div class="mb-fill" style="width:91.2%;background:linear-gradient(90deg,#0EA5A4,#3B82F6)"></div></div>
+            </div>
+            <div class="metric-bar-item">
+              <div class="mb-header"><span>Recall</span><span class="mb-val">89.8%</span></div>
+              <div class="mb-track"><div class="mb-fill" style="width:89.8%;background:linear-gradient(90deg,#6366F1,#A855F7)"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detected Structures -->
+        <div class="panel-card">
+          <div class="card-header">
+            <span class="card-title">Detected Structures</span>
+            <button class="card-action-btn" id="toggle-all-structures">Show All</button>
+          </div>
+          <div class="structures-list">
+            <div class="structure-item" data-bone="femur">
+              <div class="structure-left">
+                <div class="struct-color-dot" style="background:#0EA5A4"></div>
+                <span class="structure-name">Femur</span>
+              </div>
+              <div class="structure-right">
+                <span class="struct-conf">99.2%</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked data-bone="femur"/>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="structure-item" data-bone="tibia">
+              <div class="structure-left">
+                <div class="struct-color-dot" style="background:#3B82F6"></div>
+                <span class="structure-name">Tibia</span>
+              </div>
+              <div class="structure-right">
+                <span class="struct-conf">98.7%</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked data-bone="tibia"/>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="structure-item" data-bone="fibula">
+              <div class="structure-left">
+                <div class="struct-color-dot" style="background:#8B5CF6"></div>
+                <span class="structure-name">Fibula</span>
+              </div>
+              <div class="structure-right">
+                <span class="struct-conf">98.1%</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked data-bone="fibula"/>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="structure-item" data-bone="patella">
+              <div class="structure-left">
+                <div class="struct-color-dot" style="background:#F59E0B"></div>
+                <span class="structure-name">Patella</span>
+              </div>
+              <div class="structure-right">
+                <span class="struct-conf">97.4%</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked data-bone="patella"/>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="structure-item" data-bone="tendons">
+              <div class="structure-left">
+                <div class="struct-color-dot" style="background:#E2E8F0;border:1px solid #CBD5E1"></div>
+                <span class="structure-name">Tendons</span>
+              </div>
+              <div class="structure-right">
+                <span class="struct-conf">96.8%</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked data-bone="tendons"/>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="structure-item" data-bone="cartilage">
+              <div class="structure-left">
+                <div class="struct-color-dot" style="background:#A78BFA"></div>
+                <span class="structure-name">Cartilage</span>
+              </div>
+              <div class="structure-right">
+                <span class="struct-conf">94.1%</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked data-bone="cartilage"/>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="structure-item abnormal" data-bone="meniscus">
+              <div class="structure-left">
+                <div class="struct-color-dot" style="background:#EF4444"></div>
+                <span class="structure-name">Meniscus</span>
+              </div>
+              <div class="structure-right">
+                <span class="struct-conf warn">⚠ 87.3%</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked data-bone="meniscus"/>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="structure-item" data-bone="ligaments">
+              <div class="structure-left">
+                <div class="struct-color-dot" style="background:#C8A878"></div>
+                <span class="structure-name">Ligaments (ACL/LCL)</span>
+              </div>
+              <div class="structure-right">
+                <span class="struct-conf">99.1%</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked data-bone="ligaments"/>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- AI Diagnosis -->
+        <div class="panel-card diagnosis-card">
+          <div class="card-header">
+            <span class="card-title">AI Diagnosis</span>
+            <span class="status-badge status-warn">Needs Review</span>
+          </div>
+          <div class="diagnosis-item">
+            <div class="diag-icon diag-red">⚠</div>
+            <div class="diag-content">
+              <div class="diag-name">Medial Meniscus Tear</div>
+              <div class="diag-sub">Grade III — High Confidence</div>
+            </div>
+            <div class="diag-conf red-conf">94%</div>
+          </div>
+          <div class="diagnosis-item">
+            <div class="diag-icon diag-amber">◑</div>
+            <div class="diag-content">
+              <div class="diag-name">Cartilage Thinning</div>
+              <div class="diag-sub">Medial Compartment</div>
+            </div>
+            <div class="diag-conf amber-conf">78%</div>
+          </div>
+          <div class="diagnosis-item">
+            <div class="diag-icon diag-green">✓</div>
+            <div class="diag-content">
+              <div class="diag-name">ACL Intact</div>
+              <div class="diag-sub">No ligament damage detected</div>
+            </div>
+            <div class="diag-conf green-conf">99%</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ── BOTTOM MRI VIEWER ── -->
+    <div class="bottom-panel">
+      <div class="mri-panel">
+        <div class="mri-header">
+          <span class="mri-title">MRI Slice Viewer</span>
+          <div class="mri-plane-tabs">
+            <button class="plane-tab active" id="plane-axial">Axial</button>
+            <button class="plane-tab" id="plane-coronal">Coronal</button>
+            <button class="plane-tab" id="plane-sagittal">Sagittal</button>
+          </div>
+        </div>
+        <div class="mri-content">
+          <div class="mri-thumbnails" id="mri-thumbnails">
+            <!-- Dynamically generated -->
+          </div>
+          <div class="mri-main-view">
+            <canvas id="mri-canvas" width="280" height="200"></canvas>
+            <div class="mri-overlay-info">
+              <span class="mri-info-tag">Slice <span id="slice-num">24</span> / 48</span>
+              <span class="mri-info-tag">3T MRI</span>
+            </div>
+          </div>
+          <div class="mri-controls">
+            <button class="mri-ctrl-btn" id="mri-prev">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="10 4 6 8 10 12"/></svg>
+            </button>
+            <div class="mri-ctrl-group">
+              <label>Slice</label>
+              <input type="range" id="slice-slider" min="1" max="48" value="24" class="range-slider" />
+            </div>
+            <button class="mri-ctrl-btn" id="mri-next">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 4 10 8 6 12"/></svg>
+            </button>
+            <div class="mri-ctrl-sep"></div>
+            <div class="mri-ctrl-group">
+              <label>Contrast</label>
+              <input type="range" id="contrast-slider" min="0" max="200" value="100" class="range-slider" />
+            </div>
+            <div class="mri-ctrl-group">
+              <label>Opacity</label>
+              <input type="range" id="opacity-slider" min="10" max="100" value="100" class="range-slider" />
+            </div>
+            <div class="mri-ctrl-group">
+              <label>Zoom</label>
+              <input type="range" id="zoom-slider" min="50" max="300" value="100" class="range-slider" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     BONE DETAIL POPUP
+════════════════════════════════════════════ -->
+<div id="bone-popup" class="bone-popup hidden">
+  <div class="popup-header">
+    <div class="popup-title-row">
+      <div class="popup-bone-icon" id="popup-bone-icon">🦴</div>
+      <div>
+        <div class="popup-bone-name" id="popup-bone-name">Femur</div>
+        <div class="popup-bone-sub" id="popup-bone-sub">Distal — Left Knee</div>
+      </div>
+    </div>
+    <button class="popup-close" id="popup-close">✕</button>
+  </div>
+  <div class="popup-body">
+    <div class="popup-stats-grid">
+      <div class="popup-stat">
+        <span class="pstat-label">Surface Area</span>
+        <span class="pstat-val" id="ps-surface">142.8 cm²</span>
+      </div>
+      <div class="popup-stat">
+        <span class="pstat-label">Volume</span>
+        <span class="pstat-val" id="ps-volume">386.4 cm³</span>
+      </div>
+      <div class="popup-stat">
+        <span class="pstat-label">Mesh Vertices</span>
+        <span class="pstat-val" id="ps-vertices">24,812</span>
+      </div>
+      <div class="popup-stat">
+        <span class="pstat-label">Mesh Faces</span>
+        <span class="pstat-val" id="ps-faces">49,624</span>
+      </div>
+    </div>
+    <div class="popup-ai-row">
+      <div class="popup-ai-item">
+        <span class="ai-label">AI Confidence</span>
+        <div class="ai-conf-bar">
+          <div class="ai-conf-fill" id="ps-confidence" style="width:99%"></div>
+        </div>
+        <span class="ai-conf-val" id="ps-conf-val">99.2%</span>
+      </div>
+    </div>
+    <div class="popup-disease-row">
+      <div class="disease-status-chip" id="ps-disease-chip">
+        <span class="ds-icon">✓</span>
+        <span id="ps-disease-text">Healthy</span>
+      </div>
+      <div class="severity-badge" id="ps-severity">N/A</div>
+    </div>
+    <div class="popup-clinical">
+      <div class="clinical-label">Clinical Notes</div>
+      <div class="clinical-text" id="ps-clinical">
+        Bone density and morphology within normal limits. No osteophytes or subchondral sclerosis detected. Cortical margins intact.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     NOTIFICATION PANEL
+════════════════════════════════════════════ -->
+<div id="notif-panel" class="notif-panel hidden">
+  <div class="notif-panel-header">
+    <span>Notifications</span>
+    <button class="notif-clear">Clear all</button>
+  </div>
+  <div class="notif-list">
+    <div class="notif-item notif-warn">
+      <div class="notif-dot-icon warn"></div>
+      <div class="notif-content">
+        <div class="notif-title">Abnormality Detected</div>
+        <div class="notif-body">Meniscus tear in Patient #KN-2024-0847</div>
+        <div class="notif-time">2 min ago</div>
+      </div>
+    </div>
+    <div class="notif-item">
+      <div class="notif-dot-icon info"></div>
+      <div class="notif-content">
+        <div class="notif-title">Segmentation Complete</div>
+        <div class="notif-body">Patient #KN-2024-0841 ready for review</div>
+        <div class="notif-time">15 min ago</div>
+      </div>
+    </div>
+    <div class="notif-item">
+      <div class="notif-dot-icon success"></div>
+      <div class="notif-content">
+        <div class="notif-title">Report Generated</div>
+        <div class="notif-body">Dr. Lee's report exported to PDF</div>
+        <div class="notif-time">1 hr ago</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MRI RECONSTRUCTION MODAL
+════════════════════════════════════════════════════ -->
+<div id="recon-modal" class="recon-modal hidden">
+  <div class="recon-modal-backdrop"></div>
+  <div class="recon-modal-content">
+
+    <!-- Header -->
+    <div class="recon-header">
+      <div class="recon-title-row">
+        <div class="recon-icon">🧬</div>
+        <div>
+          <div class="recon-title">MRI → 3D Reconstruction</div>
+          <div class="recon-subtitle">Generate a patient-specific bone model from scan data</div>
+        </div>
+      </div>
+      <button class="recon-close" id="recon-close">✕</button>
+    </div>
+
+    <!-- Mode tabs -->
+    <div class="recon-tabs">
+      <button class="recon-tab active" id="rtab-demo" data-tab="demo">
+        <span>⚡</span> Demo Mode
+        <small>Synthetic anatomy — no files needed</small>
+      </button>
+      <button class="recon-tab" id="rtab-dicom" data-tab="dicom">
+        <span>📁</span> Upload DICOM
+        <small>Real patient .dcm files</small>
+      </button>
+    </div>
+
+    <!-- Demo panel -->
+    <div class="recon-panel" id="rpanel-demo">
+      <div class="recon-demo-card">
+        <div class="recon-demo-visual">
+          <div class="demo-anim-ring"></div>
+          <div class="demo-anim-ring r2"></div>
+          <div class="demo-anim-ring r3"></div>
+          <div class="demo-knee-icon">🦴</div>
+        </div>
+        <div class="recon-demo-info">
+          <h3>Synthetic Knee Anatomy</h3>
+          <p>Generates a mathematically accurate 3D knee model using Signed Distance Functions — runs the full Marching Cubes pipeline without any patient data.</p>
+          <ul class="recon-feature-list">
+            <li><span class="feat-check">✓</span> Femur + Tibia + Patella + Fibula</li>
+            <li><span class="feat-check">✓</span> Articular cartilage layers</li>
+            <li><span class="feat-check">✓</span> Medial &amp; lateral menisci</li>
+            <li><span class="feat-check">✓</span> Disease simulation overlay</li>
+            <li><span class="feat-check">✓</span> ~80k triangles at 72³ resolution</li>
+          </ul>
+          <div class="recon-res-row">
+            <label>Volume Resolution</label>
+            <div class="res-options">
+              <button class="res-btn" data-res="48">48³ <small>Fast</small></button>
+              <button class="res-btn active" data-res="72">72³ <small>Quality</small></button>
+              <button class="res-btn" data-res="96">96³ <small>High</small></button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="recon-start-btn" id="btn-start-demo">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 10 5 17 5 3"/></svg>
+        Run Reconstruction
+      </button>
+    </div>
+
+    <!-- DICOM panel -->
+    <div class="recon-panel hidden" id="rpanel-dicom">
+      <div class="recon-dropzone" id="recon-dropzone">
+        <div class="dropzone-icon">📂</div>
+        <div class="dropzone-title">Drop DICOM files here</div>
+        <div class="dropzone-sub">Drag &amp; drop your .dcm MRI series (30–200 files)</div>
+        <button class="dropzone-browse" id="dropzone-browse">Browse Files</button>
+        <input type="file" id="dicom-file-input" multiple accept=".dcm,.dicom" style="display:none"/>
+        <div class="dropzone-tags">
+          <span class="dtag">🔒 Never leaves your device</span>
+          <span class="dtag">✅ HIPAA safe</span>
+          <span class="dtag">⚡ Browser-only processing</span>
+        </div>
+      </div>
+      <div class="dicom-file-list" id="dicom-file-list"></div>
+      <button class="recon-start-btn hidden" id="btn-start-dicom">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 10 5 17 5 3"/></svg>
+        Start Reconstruction
+      </button>
+    </div>
+
+    <!-- Progress panel (shown during processing) -->
+    <div class="recon-progress-panel hidden" id="recon-progress-panel">
+      <div class="progress-stages" id="progress-stages">
+        <div class="prog-stage" id="ps-volume">
+          <div class="ps-icon">🧊</div>
+          <div class="ps-info">
+            <div class="ps-label">Building Volume</div>
+            <div class="ps-bar"><div class="ps-fill"></div></div>
+          </div>
+          <div class="ps-status">⏳</div>
+        </div>
+        <div class="prog-stage" id="ps-segment">
+          <div class="ps-icon">🔬</div>
+          <div class="ps-info">
+            <div class="ps-label">Bone Segmentation</div>
+            <div class="ps-bar"><div class="ps-fill"></div></div>
+          </div>
+          <div class="ps-status">⏳</div>
+        </div>
+        <div class="prog-stage" id="ps-marching">
+          <div class="ps-icon">⚡</div>
+          <div class="ps-info">
+            <div class="ps-label">Marching Cubes</div>
+            <div class="ps-bar"><div class="ps-fill"></div></div>
+          </div>
+          <div class="ps-status">⏳</div>
+        </div>
+        <div class="prog-stage" id="ps-mesh">
+          <div class="ps-icon">🌐</div>
+          <div class="ps-info">
+            <div class="ps-label">Generating Mesh</div>
+            <div class="ps-bar"><div class="ps-fill"></div></div>
+          </div>
+          <div class="ps-status">⏳</div>
+        </div>
+        <div class="prog-stage" id="ps-viewer">
+          <div class="ps-icon">✨</div>
+          <div class="ps-info">
+            <div class="ps-label">Loading Viewer</div>
+            <div class="ps-bar"><div class="ps-fill"></div></div>
+          </div>
+          <div class="ps-status">⏳</div>
+        </div>
+      </div>
+      <div class="progress-msg" id="progress-msg">Initializing…</div>
+      <div class="progress-pct" id="progress-pct">0%</div>
+      <div class="overall-bar">
+        <div class="overall-fill" id="overall-fill"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="overlay-bg" class="overlay-bg hidden"></div>
+
+<script src="reconstruction.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
