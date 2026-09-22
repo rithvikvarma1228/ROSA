@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a1118">
+  <title>KneeAI | Analysis Complete</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-lockup">
+        <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div>
+          <div class="brand-name">KNEE<span>AI</span></div>
+          <p>AI-assisted knee segmentation &amp; 3D reconstruction</p>
+        </div>
+      </div>
+      <div class="case-meta">
+        <div><span class="meta-label">CASE</span><strong>KNEE-001</strong></div>
+        <div class="complete-state"><i></i><span class="meta-label">STATUS</span><strong>ANALYSIS COMPLETE</strong></div>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="analysis-panel" aria-label="Patient analysis">
+        <div class="panel-intro">
+          <span class="eyebrow">Patient analysis</span>
+          <h1>Reconstruction<br><em>ready to review.</em></h1>
+          <p class="intro-copy">Segmented anatomy reconstructed from a simulated CT workflow.</p>
+        </div>
+
+        <section class="data-block">
+          <div class="data-row"><span>Case ID</span><strong>KNEE-001</strong></div>
+          <div class="data-row"><span>Patient</span><strong>Demo Patient</strong></div>
+          <div class="data-row"><span>Scan type</span><strong>Knee CT</strong></div>
+          <div class="data-row"><span>AI status</span><strong class="status-value"><b>✓</b> Segmentation complete</strong></div>
+          <div class="data-row"><span>3D reconstruction</span><strong class="status-value"><b>✓</b> Complete</strong></div>
+        </section>
+
+        <section class="anatomy-section">
+          <div class="section-heading"><span class="eyebrow">Segmented anatomy</span><span class="structure-count">3 / 3</span></div>
+          <div class="bone-list">
+            <button class="bone-control selected" data-bone="femur" type="button">
+              <span class="check-box">✓</span><span class="bone-swatch femur-swatch"></span><span class="bone-label"><strong>Femur</strong><small>Segmented · 96%</small></span><span class="chevron">›</span>
+            </button>
+            <button class="bone-control" data-bone="tibia" type="button">
+              <span class="check-box">✓</span><span class="bone-swatch tibia-swatch"></span><span class="bone-label"><strong>Tibia</strong><small>Segmented · 94%</small></span><span class="chevron">›</span>
+            </button>
+            <button class="bone-control" data-bone="patella" type="button">
+              <span class="check-box">✓</span><span class="bone-swatch patella-swatch"></span><span class="bone-label"><strong>Patella</strong><small>Segmented · 92%</small></span><span class="chevron">›</span>
+            </button>
+          </div>
+          <p class="demo-note"><span>i</span> Confidence values are simulated demo data.</p>
+        </section>
+
+        <section class="selected-info" aria-live="polite">
+          <div class="selected-heading"><span class="eyebrow">Selected anatomy</span><span class="selection-dot"></span></div>
+          <div class="selected-name" id="selected-name">Femur</div>
+          <div class="info-grid"><div><span>AI segmentation</span><strong>Complete</strong></div><div><span>Confidence</span><strong id="selected-confidence">96%</strong></div></div>
+        </section>
+
+        <section class="view-actions">
+          <span class="eyebrow">View controls</span>
+          <div class="action-grid">
+            <button type="button" id="reset-view"><span class="action-icon">↺</span>Reset view</button>
+            <button type="button" id="show-all"><span class="action-icon">◉</span>Show all</button>
+            <button type="button" id="hide-all"><span class="action-icon">○</span>Hide all</button>
+            <button type="button" id="isolate-selected"><span class="action-icon">◌</span>Isolate selected</button>
+          </div>
+        </section>
+      </aside>
+
+      <section class="viewer-panel" aria-label="Interactive 3D knee viewer">
+        <div id="loader" class="loader-overlay"><div class="loader-top"><span class="loader-pulse"></span><span id="loader-label">Loading patient analysis...</span><span class="loader-step" id="loader-step">01 / 04</span></div><div class="loader-track"><span id="loader-progress"></span></div></div>
+        <div id="viewer" class="viewer-canvas" aria-label="Interactive 3D model of the knee">
+          <div id="model-status" class="model-status" role="status" aria-live="polite">Loading supplied model...</div>
+          <div class="anatomy-labels" aria-hidden="true">
+            <span class="anatomy-label" data-label="femur">Femur</span>
+            <span class="anatomy-label" data-label="tibia">Tibia</span>
+            <span class="anatomy-label" data-label="patella">Patella</span>
+          </div>
+        </div>
+        <div class="viewer-topline"><div class="viewer-title"><span class="live-dot"></span><span>3D reconstruction</span></div><span class="viewer-tag">Patient-specific demo</span></div>
+        <div class="viewer-tools" aria-label="Model review tools">
+          <button id="auto-rotate" type="button" aria-pressed="false" title="Toggle auto-rotate"><span>↻</span> Auto</button>
+          <button id="wireframe" type="button" aria-pressed="false" title="Toggle wireframe view"><span>▦</span> Wire</button>
+          <label class="opacity-control" for="model-opacity"><span>Opacity</span><input id="model-opacity" type="range" min="35" max="100" value="100"><output id="opacity-value">100%</output></label>
+          <button id="snapshot" type="button" title="Save a PNG snapshot"><span>⇩</span> Snapshot</button>
+        </div>
+        <div class="viewer-overlay"><span class="eyebrow">3D reconstruction</span><strong>Complete</strong><div class="overlay-divider"></div><span class="overlay-detail">Bones <b>3 / 3</b></span><span class="overlay-detail">Model <b id="model-source">Uploaded FBX</b></span></div>
+        <div class="orientation"><span class="orientation-ring"></span><span class="orientation-label"><b>ANT</b><b>R</b></span></div>
+        <div class="viewer-hint"><span>Drag to rotate</span><i></i><span>Scroll to zoom</span></div>
+      </section>
+    </main>
+
+    <footer class="statusbar"><div class="status-item"><i></i><span><b>AI segmentation</b><strong>✓ Complete</strong></span></div><div class="status-item"><i></i><span><b>3D reconstruction</b><strong>✓ Complete</strong></span></div><div class="status-item"><i></i><span><b>Anatomical structures</b><strong>3 / 3</strong></span></div><p>Prototype visualization — not intended for clinical diagnosis or surgical use.</p></footer>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/loaders/FBXLoader.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
